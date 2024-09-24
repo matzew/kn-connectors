@@ -27,11 +27,17 @@
         <quarkus.container-image.registry>localhost:5001</quarkus.container-image.registry>
         <quarkus.container-image.group>openshift-knative</quarkus.container-image.group>
 
+        <!-- needed from tooling/archetypes -->
+        <maven-version>3.9.9</maven-version>
+        <maven-archetype-plugin-version>3.2.1</maven-archetype-plugin-version>
+        <maven-archetype-packaging-version>3.2.1</maven-archetype-packaging-version>
+
         <surefire-plugin.version>3.1.2</surefire-plugin.version>
         <skipITs>true</skipITs>
     </properties>
 
     <modules>
+        <module>tools</module>
         <module>timer-source</module>
         <module>log-sink</module>
     </modules>
