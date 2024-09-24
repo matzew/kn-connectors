@@ -1,8 +1,7 @@
-# Knative connectors
+# Knative connector timer-source
 
-Knative eventing connectors based on [Apache Camel Kamelets](https://camel.apache.org/camel-kamelets/).
-Each connector project is able to act as a source or sink for the Knative eventing broker.
-The projects create container images that may be referenced in a KameletSource/KameletSink custom resource in Knative.
+Knative eventing connector based on [Apache Camel Kamelets](https://camel.apache.org/camel-kamelets/).
+The connector project creates a container image that is pushed into a registry so the image can be referenced in a Kubernetes deployment.
 
 ## Build the container image
 
