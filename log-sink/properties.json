@@ -1,0 +1,85 @@
+{
+  "description" : "A sink that logs all data that it receives, useful for debugging purposes.",
+  "properties" : {
+    "loggerName" : {
+      "default" : "log-sink",
+      "description" : "Name of the logging category to use",
+      "title" : "Logger Name",
+      "type" : "string"
+    },
+    "level" : {
+      "default" : "INFO",
+      "description" : "Logging level to use",
+      "enum" : [ "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "OFF" ],
+      "title" : "Log Level",
+      "type" : "string"
+    },
+    "logMask" : {
+      "default" : false,
+      "description" : "Mask sensitive information like password or passphrase in the log",
+      "title" : "Log Mask",
+      "type" : "boolean"
+    },
+    "marker" : {
+      "description" : "An optional Marker name to use",
+      "title" : "Marker",
+      "type" : "string"
+    },
+    "multiline" : {
+      "default" : false,
+      "description" : "If enabled then each information is outputted on a newline",
+      "title" : "Multiline",
+      "type" : "boolean"
+    },
+    "showAllProperties" : {
+      "default" : false,
+      "description" : "Show all of the exchange properties (both internal and custom)",
+      "title" : "Show All Properties",
+      "type" : "boolean"
+    },
+    "showBody" : {
+      "default" : true,
+      "description" : "Show the message body",
+      "title" : "Show Body",
+      "type" : "boolean"
+    },
+    "showBodyType" : {
+      "default" : true,
+      "description" : "Show the body Java type",
+      "title" : "Show Body Type",
+      "type" : "boolean"
+    },
+    "showExchangePattern" : {
+      "default" : true,
+      "description" : "Shows the Message Exchange Pattern (or MEP for short)",
+      "title" : "Show Exchange Pattern",
+      "type" : "boolean"
+    },
+    "showHeaders" : {
+      "default" : false,
+      "description" : "Show the headers received",
+      "title" : "Show Headers",
+      "type" : "boolean"
+    },
+    "showProperties" : {
+      "default" : false,
+      "description" : "Show the exchange properties (only custom). Use showAllProperties to show both internal and custom properties.",
+      "title" : "Show Properties",
+      "type" : "boolean"
+    },
+    "showStreams" : {
+      "default" : false,
+      "description" : "Show the stream bodies (they may not be available in following steps)",
+      "title" : "Show Streams",
+      "type" : "boolean"
+    },
+    "showCachedStreams" : {
+      "default" : true,
+      "description" : "Whether Camel should show cached stream bodies or not.",
+      "title" : "Show Cached Streams",
+      "type" : "boolean"
+    }
+  },
+  "title" : "Log Sink",
+  "type" : "object"
+}

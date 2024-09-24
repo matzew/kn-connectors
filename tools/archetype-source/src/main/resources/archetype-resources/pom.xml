@@ -27,7 +27,6 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>${groupId}</groupId>
   <artifactId>${artifactId}</artifactId>
   <name>Knative Connector :: Source :: ${kamelet-name}</name>
 
@@ -131,6 +130,23 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>dev.knative.eventing</groupId>
+        <artifactId>kn-connector-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <configuration>
+          <kameletName>${kamelet-name}-source</kameletName>
+        </configuration>
+        <executions>
+          <execution>
+            <id>generate-connector-spec</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>${quarkus.platform.group-id}</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>

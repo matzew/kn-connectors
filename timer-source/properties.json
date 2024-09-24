@@ -1,0 +1,31 @@
+{
+  "description" : "Produces periodic messages with a custom payload.",
+  "properties" : {
+    "period" : {
+      "default" : 1000,
+      "description" : "The interval (in milliseconds) to wait between producing the next message.",
+      "title" : "Period",
+      "type" : "integer"
+    },
+    "message" : {
+      "description" : "The message to generate.",
+      "example" : "hello world",
+      "title" : "Message",
+      "type" : "string"
+    },
+    "contentType" : {
+      "default" : "text/plain",
+      "description" : "The content type of the generated message.",
+      "title" : "Content Type",
+      "type" : "string"
+    },
+    "repeatCount" : {
+      "description" : "Specifies a maximum limit of number of fires",
+      "title" : "Repeat Count",
+      "type" : "integer"
+    }
+  },
+  "required" : [ "message" ],
+  "title" : "Timer Source",
+  "type" : "object"
+}
