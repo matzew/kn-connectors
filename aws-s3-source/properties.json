@@ -1,0 +1,140 @@
+{
+  "description" : "Receive data from an Amazon S3 Bucket.\n\nThe basic authentication method for the S3 service is to specify an access key and a secret key. These parameters are optional because the Kamelet provides a default credentials provider.\n\nIf you use the default credentials provider, the S3 client loads the credentials through this provider and doesn't use the basic authentication method.\n\nTwo headers will be duplicated with different names for clarity at sink level, CamelAwsS3Key will be duplicated into aws.s3.key and CamelAwsS3BucketName will be duplicated in aws.s3.bucket.name",
+  "properties" : {
+    "bucketNameOrArn" : {
+      "description" : "The S3 Bucket name or Amazon Resource Name (ARN).",
+      "title" : "Bucket Name",
+      "type" : "string"
+    },
+    "deleteAfterRead" : {
+      "default" : true,
+      "description" : "Specifies to delete objects after consuming them.",
+      "title" : "Auto-delete Objects",
+      "type" : "boolean"
+    },
+    "moveAfterRead" : {
+      "default" : false,
+      "description" : "Move objects from S3 bucket to a different bucket after they have been retrieved.",
+      "title" : "Move Objects After Delete",
+      "type" : "boolean"
+    },
+    "destinationBucket" : {
+      "description" : "Define the destination bucket where an object must be moved when moveAfterRead is set to true.",
+      "title" : "Destination Bucket",
+      "type" : "string"
+    },
+    "destinationBucketPrefix" : {
+      "description" : "Define the destination bucket prefix to use when an object must be moved, and moveAfterRead is set to true.",
+      "title" : "Destination Bucket Prefix",
+      "type" : "string"
+    },
+    "destinationBucketSuffix" : {
+      "description" : "Define the destination bucket suffix to use when an object must be moved, and moveAfterRead is set to true.",
+      "title" : "Destination Bucket Suffix",
+      "type" : "string"
+    },
+    "accessKey" : {
+      "description" : "The access key obtained from AWS.",
+      "format" : "password",
+      "title" : "Access Key",
+      "type" : "string",
+      "x-descriptors" : [ "urn:camel:group:credentials" ],
+      "xdescriptors" : [ "urn:camel:group:credentials" ]
+    },
+    "secretKey" : {
+      "description" : "The secret key obtained from AWS.",
+      "format" : "password",
+      "title" : "Secret Key",
+      "type" : "string",
+      "x-descriptors" : [ "urn:camel:group:credentials" ],
+      "xdescriptors" : [ "urn:camel:group:credentials" ]
+    },
+    "region" : {
+      "description" : "The AWS region to access.",
+      "enum" : [ "ap-south-1", "eu-south-1", "us-gov-east-1", "me-central-1", "ca-central-1", "eu-central-1", "us-iso-west-1", "us-west-1", "us-west-2", "af-south-1", "eu-north-1", "eu-west-3", "eu-west-2", "eu-west-1", "ap-northeast-3", "ap-northeast-2", "ap-northeast-1", "me-south-1", "sa-east-1", "ap-east-1", "cn-north-1", "us-gov-west-1", "ap-southeast-1", "ap-southeast-2", "us-iso-east-1", "ap-southeast-3", "us-east-1", "us-east-2", "cn-northwest-1", "us-isob-east-1", "aws-global", "aws-cn-global", "aws-us-gov-global", "aws-iso-global", "aws-iso-b-global" ],
+      "title" : "AWS Region",
+      "type" : "string"
+    },
+    "autoCreateBucket" : {
+      "default" : false,
+      "description" : "Specifies to automatically create the S3 bucket.",
+      "title" : "Autocreate Bucket",
+      "type" : "boolean"
+    },
+    "prefix" : {
+      "description" : "The AWS S3 bucket prefix to consider while searching.",
+      "example" : "folder/",
+      "title" : "Prefix",
+      "type" : "string"
+    },
+    "ignoreBody" : {
+      "default" : false,
+      "description" : "If true, the S3 Object body is ignored. Setting this to true overrides any behavior defined by the `includeBody` option. If false, the S3 object is put in the body.",
+      "title" : "Ignore Body",
+      "type" : "boolean"
+    },
+    "useDefaultCredentialsProvider" : {
+      "default" : false,
+      "description" : "If true, the S3 client loads credentials through a default credentials provider. If false, it uses the basic authentication method (access key and secret key).",
+      "title" : "Default Credentials Provider",
+      "type" : "boolean"
+    },
+    "useProfileCredentialsProvider" : {
+      "default" : false,
+      "description" : "Set whether the S3 client should expect to load credentials through a profile credentials provider.",
+      "title" : "Profile Credentials Provider",
+      "type" : "boolean"
+    },
+    "useSessionCredentials" : {
+      "default" : false,
+      "description" : "Set whether the S3 client should expect to use Session Credentials. This is useful in situation in which the user needs to assume a IAM role for doing operations in S3.",
+      "title" : "Session Credentials",
+      "type" : "boolean"
+    },
+    "profileCredentialsName" : {
+      "description" : "If using a profile credentials provider this parameter will set the profile name.",
+      "title" : "Profile Credentials Name",
+      "type" : "string"
+    },
+    "sessionToken" : {
+      "description" : "Amazon AWS Session Token used when the user needs to assume a IAM role.",
+      "format" : "password",
+      "title" : "Session Token",
+      "type" : "string",
+      "x-descriptors" : [ "urn:camel:group:credentials" ],
+      "xdescriptors" : [ "urn:camel:group:credentials" ]
+    },
+    "uriEndpointOverride" : {
+      "description" : "The overriding endpoint URI. To use this option, you must also select the `overrideEndpoint` option.",
+      "title" : "Overwrite Endpoint URI",
+      "type" : "string"
+    },
+    "overrideEndpoint" : {
+      "default" : false,
+      "description" : "Select this option to override the endpoint URI. To use this option, you must also provide a URI for the `uriEndpointOverride` option.",
+      "title" : "Endpoint Overwrite",
+      "type" : "boolean"
+    },
+    "forcePathStyle" : {
+      "default" : false,
+      "description" : "Forces path style when accessing AWS S3 buckets.",
+      "title" : "Force Path Style",
+      "type" : "boolean"
+    },
+    "delay" : {
+      "default" : 500,
+      "description" : "The number of milliseconds before the next poll of the selected bucket.",
+      "title" : "Delay",
+      "type" : "integer"
+    },
+    "maxMessagesPerPoll" : {
+      "default" : 10,
+      "description" : "Gets the maximum number of messages as a limit to poll at each polling. Gets the maximum number of messages as a limit to poll at each polling. The default value is 10. Use 0 or a negative number to set it as unlimited.",
+      "title" : "Max Messages Per Poll",
+      "type" : "integer"
+    }
+  },
+  "required" : [ "bucketNameOrArn", "region" ],
+  "title" : "AWS S3 Source",
+  "type" : "object"
+}
