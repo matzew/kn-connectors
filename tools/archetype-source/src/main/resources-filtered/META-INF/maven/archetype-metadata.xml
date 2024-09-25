@@ -37,10 +37,22 @@
     </requiredProperty>
   </requiredProperties>
   <fileSets>
-    <fileSet filtered="true" packaged="true" encoding="UTF-8">
+    <fileSet filtered="true" encoding="UTF-8">
       <directory>src/main/kubernetes</directory>
       <includes>
         <include>**/*.yml</include>
+      </includes>
+    </fileSet>
+    <fileSet encoding="UTF-8">
+      <directory>META-INF</directory>
+      <includes>
+        <include>Dockerfile.*</include>
+      </includes>
+    </fileSet>
+    <fileSet encoding="UTF-8">
+      <directory>src/main/docker</directory>
+      <includes>
+        <include>Dockerfile.*</include>
       </includes>
     </fileSet>
     <fileSet filtered="true" encoding="UTF-8">
@@ -49,11 +61,13 @@
         <include>**/*.yaml</include>
         <include>**/*.json</include>
         <include>**/*.properties</include>
+        <include>**/*.txt</include>
       </includes>
     </fileSet>
     <fileSet filtered="true" encoding="UTF-8">
       <directory/>
       <includes>
+        <include>properties.adoc</include>
         <include>README.adoc</include>
       </includes>
     </fileSet>

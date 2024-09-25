@@ -22,13 +22,13 @@
 
   <parent>
     <groupId>dev.knative.eventing</groupId>
-    <artifactId>kn-connector-sources</artifactId>
+    <artifactId>kn-connectors</artifactId>
     <version>${version}</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>${artifactId}</artifactId>
-  <name>Knative Connector :: Source :: ${kamelet-name}</name>
+  <artifactId>kn-connector-${artifactId}</artifactId>
+  <name>Knative Connectors :: ${kamelet-name} Source</name>
 
   <dependencies>
     <dependency>

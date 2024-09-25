@@ -55,7 +55,7 @@ The Kubernetes manifest includes:
 * Deployment
 * SinkBinding
 
-You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubenretes/kubernetes.yml].
+You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubernetes/kubernetes.yml].
 This is being used as a basis and Quarkus will generate the final manifest in `target/kubernetes/kubernetes.yml` during the build.
 
 == Deploy to Kubernetes
