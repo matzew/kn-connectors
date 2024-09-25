@@ -24,7 +24,7 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.14.4</quarkus.platform.version>
         <quarkus.container-image.insecure>true</quarkus.container-image.insecure>
-        <quarkus.container-image.registry>localhost:5001</quarkus.container-image.registry>
+        <quarkus.container-image.registry>quay.io</quarkus.container-image.registry>
         <quarkus.container-image.group>openshift-knative</quarkus.container-image.group>
 
         <!-- needed from tooling/archetypes -->
