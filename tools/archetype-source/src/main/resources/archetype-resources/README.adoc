@@ -3,6 +3,13 @@
 Knative eventing connector based on https://camel.apache.org/camel-kamelets/[Apache Camel Kamelets].
 The connector project creates a container image that is pushed into a registry so the image can be referenced in a Kubernetes deployment.
 
+== Kamelet properties
+
+The kn-connector source images provides these properties that you can set (e.g. via environment properties on the deployment).
+
+.Kamelet properties
+include::properties.adoc[]
+
 == Build the container image
 
 The project uses Quarkus in combination with Apache Camel, Kamelets and Maven as a build tool.
@@ -49,14 +56,14 @@ In case you want to connect with a local cluster like Kind or Minikube you may a
 The build produces a Kubernetes manifest in (`target/kubernetes/kubernetes.yml`).
 This manifest holds all resources required to run the application on your Kubernetes cluster.
 
-The Kubernetes manifest includes:
+You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubernetes/kubernetes.yml].
+This is being used as a basis and Quarkus will generate the final manifest in `target/kubernetes/kubernetes.yml` during the build.
+
+The final Kubernetes manifest includes:
 
 * Service
 * Deployment
 * SinkBinding
-
-You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubernetes/kubernetes.yml].
-This is being used as a basis and Quarkus will generate the final manifest in `target/kubernetes/kubernetes.yml` during the build.
 
 == Deploy to Kubernetes
 
@@ -67,19 +74,23 @@ You can deploy the application to Kubernetes with:
 ./mvnw package -Dquarkus.kubernetes.deploy=true
 ----
 
-This connects to the current Kubernetes cluster that you are connected with (e.g. via `kubectl config set-context --current --namespace $1`).
+This deploys the application to the current Kubernetes cluster that you are connected to (e.g. via `kubectl config set-context --current` and `kubectl config view --minify`).
 
 You may change the target namespace with `-Dquarkus.kubernetes.namespace=my-namespace`.
 
-== Kamelet source pipe
+[source,shell]
+----
+./mvnw package -Dquarkus.kubernetes.deploy=true -Dquarkus.kubernetes.namespace=my-namespace
+----
+
+== Kamelet source Pipe
 
 The source produces events for the Knative broker.
-It uses a Pipe resource as the central piece of code to define how the Knative events are produced.
+It uses a Apache Camel Pipe resource as the central piece of code to define how the Knative events are produced.
 
 The Pipe is a YAML file located in link:src/main/resources/camel/kn-connector-source.yaml[src/main/resources/camel/kn-connector-source.yaml]
 
-_kn-connector-source.yaml_
-
+.kn-connector-source.yaml
 [source,yaml]
 ----
 apiVersion: camel.apache.org/v1
@@ -112,7 +123,7 @@ The SinkBinding injects a `K_SINK` environment variable to the deployment and th
 This way the same container image can be used with different brokers.
 It is only a matter of configuring the SinkBinding resource that connects the application with the Knative broker.
 
-You can find a sample SinkBinding in `src/main/kubernetes/kubernetes.yml`
+You can find a sample SinkBinding in link:src/main/kubernetes/kubernetes.yml[src/main/kubernetes/kubernetes.yml]
 
 [source,yaml]
 ----
@@ -154,7 +165,7 @@ You can set the environment variable on the running deployment:
 
 [source,shell]
 ----
-kubectl set env deployment/kn-connector-${kamelet-name}-source CAMEL_KAMELET_TIMER_SOURCE_MESSAGE="I updated it..."
+kubectl set env deployment/kn-connector-${kamelet-name}-source CAMEL_KAMELET_{{KAMELET_NAME}}_{{PROPERTY_NAME}}="I updated it..."
 ----
 
 The environment variables that overwrite properties on the Kamelet source follow a naming convention:
@@ -167,8 +178,9 @@ The name represents the name of the Kamelet source as defined in the https://cam
 
 You may also mount a configmap/secret to overwrite Kamelet properties with values from the configmap/secret resource.
 
-Given a configmap named `kn-source-config` in Kubernetes that has two entries:
+Given a configmap named `my-${kamelet-name}-source-config` in Kubernetes that has two entries:
 
+.my-${kamelet-name}-source-config
 [source,properties]
 ----
 message = Knative rocks!
@@ -177,8 +189,8 @@ period = 3000
 
 You can reference the values of the configmap in the environment variables like this:
 
-* CAMEL_KAMELET_TIMER_SOURCE_MESSAGE={{configmap:kn-source-config/message}}
-* CAMEL_KAMELET_TIMER_SOURCE_PERIOD={{configmap:kn-source-config/period}}
+* CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE={{configmap:kn-source-config/message}}
+* CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD={{configmap:kn-source-config/period}}
 
 The configmap property values follow this general syntax:
 
@@ -191,7 +203,7 @@ This means you can also set a default value in case the configmap should not be 
 
 [source,text]
 ----
-configmap:${kamelet-name}-source-config/period:5000
+configmap:kn-source-config/period:5000
 ----
 
 You can set the environment variables on the Kubernetes deployment for the connector:
@@ -210,13 +222,13 @@ spec:
   template:
     spec:
       containers:
-        - image: localhost:5001/cdeppisc/${kamelet-name}-source:1.0-SNAPSHOT
+        - image: localhost:5001/openshift-knative/${kamelet-name}-source:1.0-SNAPSHOT
           imagePullPolicy: Always
           name: ${kamelet-name}-source
           env:
-            - name: CAMEL_KAMELET_TIMER_SOURCE_MESSAGE
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE
               value: "{{configmap:kn-source-config/message}}"
-            - name: CAMEL_KAMELET_TIMER_SOURCE_PERIOD
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD
               value: "{{configmap:kn-source-config/period:1000}}"
 ----
 
@@ -236,22 +248,22 @@ spec:
   template:
     spec:
       containers:
-        - image: localhost:5001/cdeppisc/${kamelet-name}-source:1.0-SNAPSHOT
+        - image: localhost:5001/openshift-knative/${kamelet-name}-source:1.0-SNAPSHOT
           imagePullPolicy: Always
           name: ${kamelet-name}-source
           env:
-            - name: CAMEL_KAMELET_TIMER_SOURCE_MESSAGE
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE
               value: "{{configmap:kn-source-config/message}}"
-            - name: CAMEL_KAMELET_TIMER_SOURCE_PERIOD
+            - name: CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD
               value: "{{configmap:kn-source-config/period:1000}}"
           volumeMounts:
             - mountPath: /etc/camel/conf.d/_configmaps/kn-source-config
-              name: ${kamelet-name}-source-config
+              name: kn-source-config
               readOnly: true
       volumes:
         - configMap:
-            name: kn-source-config
-          name: ${kamelet-name}-source-config
+            name: my-${kamelet-name}-source-config
+          name: kn-source-config
 ----
 
 Camel is able to resolve the configmap mount path given in the volume mount.
@@ -278,8 +290,8 @@ secret:name/key[:defaultValue]
 
 This means you can overwrite Kamelet properties with the values from the secret like this:
 
-* CAMEL_KAMELET_TIMER_SOURCE_MESSAGE=secret:source-config/msg
-* CAMEL_KAMELET_TIMER_SOURCE_PERIOD=secret:source-config/period
+* CAMEL_KAMELET_{{KAMELET_NAME}}_MESSAGE=secret:kn-source-config/msg
+* CAMEL_KAMELET_{{KAMELET_NAME}}_PERIOD=secret:kn-source-config/period
 
 == CloudEvent attributes
 
@@ -312,25 +324,6 @@ You can use one of the Kamelets available in the https://camel.apache.org/camel-
 
 Typically, the Kamelet is backed by a Quarkus Camel extension component dependency that needs to be added to the Maven POM.
 The Kamelets in use may list additional dependencies that we need to include in the Maven POM.
-
-== Custom Kamelets
-
-Creating a new kn-connector project is very straightforward.
-You may copy one of the sample projects and adjust the reference to the Kamelets.
-
-Also, you can use the Camel JBang kubernetes export functionality to generate a Maven project from a given Pipe YAML file.
-
-[source,shell]
-----
-camel kubernetes export my-pipe.yaml --runtime quarkus --dir target
-----
-
-This generates a Maven project that you can use as a starting point for the kn-connector project.
-
-The connector is able to reference all Kamelets that are part of the https://camel.apache.org/camel-kamelets/[default Kamelet catalog].
-
-In case you want to use a custom Kamelet, place the `kamelet.yaml` file into `src/main/resources/kamelets`.
-The Kamelet will become part of the built container image and you can just reference the Kamelet in the Pipe YAML file as a source or sink.
 
 == More configuration options
 

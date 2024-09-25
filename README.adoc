@@ -2,7 +2,7 @@
 
 Knative eventing connectors based on https://camel.apache.org/camel-kamelets/[Apache Camel Kamelets].
 Each connector project is able to act as a source or sink for the Knative eventing broker.
-The projects create container images that may be referenced in a KameletSource/KameletSink custom resource in Knative.
+The projects create container images that get referenced in a Knative KameletSource/KameletSink custom resource.
 
 == Create new connectors
 
@@ -65,7 +65,7 @@ By default, the container image looks like this:
 
 [source,text]
 ----
-quay.io/openshift-knative/kn-connector-timer-source:1.0-SNAPSHOT
+quay.io/openshift-knative/kn-connector-{{source-name}}:1.0-SNAPSHOT
 ----
 
 The project leverages the Quarkus Kubernetes and container image extensions so you can use Quarkus properties and configurations to customize the resulting container image.
@@ -93,13 +93,7 @@ In case you want to connect with a local cluster like Kind or Minikube you may a
 The build produces a Kubernetes manifest in (`target/kubernetes/kubernetes.yml`).
 This manifest holds all resources required to run the application on your Kubernetes cluster.
 
-The Kubernetes manifest includes:
-
-* Service
-* Deployment
-* SinkBinding
-
-You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubenretes/kubernetes.yml].
+You can customize the Kubernetes resources in `src/main/kubernetes/kubernetes.yml`.
 This is being used as a basis and Quarkus will generate the final manifest in `target/kubernetes/kubernetes.yml` during the build.
 
 == Deploy to Kubernetes
@@ -111,76 +105,9 @@ You can deploy the application to Kubernetes with:
 ./mvnw package -Dquarkus.kubernetes.deploy=true
 ----
 
-This connects to the current Kubernetes cluster that you are connected with (e.g. via `kubectl config set-context --current --namespace $1`).
+This deploys the application to the current Kubernetes cluster that you are connected to (e.g. via `kubectl config set-context --current` and `kubectl config view --minify`).
 
 You may change the target namespace with `-Dquarkus.kubernetes.namespace=my-namespace`.
-
-== Kamelet source pipe
-
-The source produces events for the Knative broker.
-It uses a Pipe resource as the central piece of code to define how the Knative events are produced.
-
-The Pipe is a YAML file located in link:src/main/resources/camel/kn-connector-source.yaml[src/main/resources/camel/kn-connector-source.yaml]
-
-_kn-connector-source.yaml_
-
-[source,yaml]
-----
-apiVersion: camel.apache.org/v1
-kind: Pipe
-metadata:
-  name: kn-connector-timer-source
-spec:
-  source:
-    ref:
-      apiVersion: camel.apache.org/v1
-      kind: Kamelet
-      name: timer-source
-  sink:
-    dataTypes:
-      in:
-        format: http-application-cloudevents
-    ref:
-      apiVersion: eventing.knative.dev/v1
-      kind: Broker
-      name: default
-----
-
-This connector uses the https://camel.apache.org/camel-kamelets/timer-source.html[timer-source] Kamelet that produces events for the Knative broker.
-
-The Pipe references the Kamelet as a source and connects to the Knative broker as a sink.
-
-The name of the broker is always `default` because the actual broker URL is injected into the application via `SinkBinding` resource.
-The SinkBinding injects a `K_SINK` environment variable to the deployment and the application uses the injected broker URL to send events to it.
-
-This way the same container image can be used with different brokers.
-It is only a matter of configuring the SinkBinding resource that connects the application with the Knative broker.
-
-You can find a sample SinkBinding in `src/main/kubernetes/kubernetes.yml`
-
-[source,yaml]
-----
-apiVersion: sources.knative.dev/v1
-kind: SinkBinding
-metadata:
-  annotations:
-    sources.knative.dev/creator: connectors.knative.dev
-  finalizers:
-    - sinkbindings.sources.knative.dev
-  labels:
-    eventing.knative.dev/connector: timer-source
-  name: kn-connector-timer-source
-spec:
-  sink:
-    ref:
-      apiVersion: eventing.knative.dev/v1
-      kind: Broker
-      name: default
-  subject:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: kn-connector-timer-source
-----
 
 == Configuration
 
@@ -191,33 +118,22 @@ The user is able to customize these properties when running a connector deployme
 
 You can customize the properties via environment variables on the deployment:
 
-* CAMEL_KAMELET_TIMER_SOURCE_MESSAGE=Hello
-* CAMEL_KAMELET_TIMER_SOURCE_PERIOD=1000
-
-You can set the environment variable on the running deployment:
-
-[source,shell]
-----
-kubectl set env deployment/kn-connector-timer-source CAMEL_KAMELET_TIMER_SOURCE_MESSAGE="I updated it..."
-----
-
 The environment variables that overwrite properties on the Kamelet source follow a naming convention:
 
 * CAMEL_KAMELET_{{KAMELET_NAME}}_{{PROPERTY_NAME}}={{PROPERTY_VALUE}}
 
 The name represents the name of the Kamelet source as defined in the https://camel.apache.org/camel-kamelets/[Kamelet catalog].
 
+You can set the environment variable on the running deployment:
+
+[source,shell]
+----
+kubectl set env deployment/kn-connector-{{source-name}} CAMEL_KAMELET_TIMER_SOURCE_MESSAGE="I updated it..."
+----
+
 === ConfigMap and Secret
 
 You may also mount a configmap/secret to overwrite Kamelet properties with values from the configmap/secret resource.
-
-Given a configmap named `kn-source-config` in Kubernetes that has two entries:
-
-[source,properties]
-----
-message = Knative rocks!
-period = 3000
-----
 
 You can reference the values of the configmap in the environment variables like this:
 
@@ -231,88 +147,6 @@ The configmap property values follow this general syntax:
 configmap:name/key[:defaultValue]
 ----
 
-This means you can also set a default value in case the configmap should not be present.
-
-[source,text]
-----
-configmap:timer-source-config/period:5000
-----
-
-You can set the environment variables on the Kubernetes deployment for the connector:
-
-[source,yaml]
-----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: timer-source
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: timer-source
-      app.kubernetes.io/version: 1.0-SNAPSHOT
-  template:
-    spec:
-      containers:
-        - image: localhost:5001/cdeppisc/timer-source:1.0-SNAPSHOT
-          imagePullPolicy: Always
-          name: timer-source
-          env:
-            - name: CAMEL_KAMELET_TIMER_SOURCE_MESSAGE
-              value: "{{configmap:kn-source-config/message}}"
-            - name: CAMEL_KAMELET_TIMER_SOURCE_PERIOD
-              value: "{{configmap:kn-source-config/period:1000}}"
-----
-
-In order to use the values from the configmap you need to add a volume and a volume mount to the deployment.
-
-[source,yaml]
-----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: timer-source
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: timer-source
-      app.kubernetes.io/version: 1.0-SNAPSHOT
-  template:
-    spec:
-      containers:
-        - image: localhost:5001/cdeppisc/timer-source:1.0-SNAPSHOT
-          imagePullPolicy: Always
-          name: timer-source
-          env:
-            - name: CAMEL_KAMELET_TIMER_SOURCE_MESSAGE
-              value: "{{configmap:kn-source-config/message}}"
-            - name: CAMEL_KAMELET_TIMER_SOURCE_PERIOD
-              value: "{{configmap:kn-source-config/period:1000}}"
-          volumeMounts:
-            - mountPath: /etc/camel/conf.d/_configmaps/kn-source-config
-              name: timer-source-config
-              readOnly: true
-      volumes:
-        - configMap:
-            name: kn-source-config
-          name: timer-source-config
-----
-
-Camel is able to resolve the configmap mount path given in the volume mount.
-The mount path is configurable via `application.properties` in the connector project:
-
-* camel.kubernetes-config.mount-path-configmaps=/etc/camel/conf.d/_configmaps/kn-source-config
-* camel.kubernetes-config.mount-path-secrets=/etc/camel/conf.d/_secrets/kn-source-config
-
-The mount path configured on the Kubernetes deployment should match the configuration in the `application.properties`.
-
-Instead of settings the mount paths statically in the `application.properties` you can also set these via environment variables on the
-Kubernetes deployment.
-
-* CAMEL_K_MOUNT_PATH_CONFIGMAPS=/etc/camel/conf.d/_configmaps/kn-source-config
-* CAMEL_K_MOUNT_PATH_SECRETS=/etc/camel/conf.d/_secrets/kn-source-config
-
-The same mechanism applies to mounting and configuring Kubernetes secrets.
 The syntax for referencing a secret value in an environment variable is as follows:
 
 [source,text]
@@ -320,19 +154,17 @@ The syntax for referencing a secret value in an environment variable is as follo
 secret:name/key[:defaultValue]
 ----
 
-This means you can overwrite Kamelet properties with the values from the secret like this:
-
-* CAMEL_KAMELET_TIMER_SOURCE_MESSAGE=secret:source-config/msg
-* CAMEL_KAMELET_TIMER_SOURCE_PERIOD=secret:source-config/period
+The configmap and secret based configuration requires to add a volume and volume-mount configuration to the connector deployment.
+Please refer to the individual source/sink project documentation for more detailed description on how to use configmaps and secrets as a configuration.
 
 == CloudEvent attributes
 
-Each connector source produces an event in CloudEvent data format.
-The connector uses a set of default values for the CloudEvent attributes:
+Each connector produces/consumes events in CloudEvent data format.
+The connector source uses a set of default values for the CloudEvent attributes:
 
-* _ce-type_: dev.knative.connector.event.timer
-* _ce-source_: dev.knative.eventing.timer-source
-* _ce-subject_: timer-source
+* _ce-type_: dev.knative.connector.event.{{source-type}}
+* _ce-source_: dev.knative.eventing.{{source-name}}
+* _ce-subject_: {{source-name}}
 
 You can customize the CloudEvent attributes with setting environment variables on the deployment.
 
@@ -344,7 +176,7 @@ You can set the CE_OVERRIDE attributes on a running deployment.
 
 [source,shell]
 ----
-kubectl set env deployment/kn-connector-timer-source KN_CONNECTOR_CE_OVERRIDE_TYPE=custom-type
+kubectl set env deployment/kn-connector-{{source-name}} KN_CONNECTOR_CE_OVERRIDE_TYPE=custom-type
 ----
 
 You may also use the SinkBinding `K_CE_OVERRIDES` environment variable set on the deployment.
@@ -373,8 +205,8 @@ This generates a Maven project that you can use as a starting point for the kn-c
 
 The connector is able to reference all Kamelets that are part of the https://camel.apache.org/camel-kamelets/[default Kamelet catalog].
 
-In case you want to use a custom Kamelet, place the `kamelet.yaml` file into `src/main/resources/kamelets`.
-The Kamelet will become part of the built container image and you can just reference the Kamelet in the Pipe YAML file as a source or sink.
+In case you want to use a custom Kamelet, place the `*.kamelet.yaml` file into `src/main/resources/kamelets`.
+The Kamelet will become part of the built container image, you can just reference the Kamelet in the Pipe YAML file as a source or sink.
 
 == More configuration options
 

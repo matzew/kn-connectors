@@ -3,6 +3,13 @@
 Knative eventing connector based on https://camel.apache.org/camel-kamelets/[Apache Camel Kamelets].
 The connector project creates a container image that is pushed into a registry so the image can be referenced in a Kubernetes deployment.
 
+== Kamelet properties
+
+The kn-connector source images provides these properties that you can set (e.g. via environment properties on the deployment).
+
+.Kamelet properties
+include::properties.adoc[]
+
 == Build the container image
 
 The project uses Quarkus in combination with Apache Camel, Kamelets and Maven as a build tool.
@@ -49,14 +56,14 @@ In case you want to connect with a local cluster like Kind or Minikube you may a
 The build produces a Kubernetes manifest in (`target/kubernetes/kubernetes.yml`).
 This manifest holds all resources required to run the application on your Kubernetes cluster.
 
-The Kubernetes manifest includes:
+You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubernetes/kubernetes.yml].
+This is being used as a basis and Quarkus will generate the final manifest in `target/kubernetes/kubernetes.yml` during the build.
+
+The final Kubernetes manifest includes:
 
 * Service
 * Deployment
 * Trigger
-
-You can customize the Kubernetes resources in link:src/main/kubernetes/kubernetes.yml[src/main/kubenretes/kubernetes.yml].
-This is being used as a basis and Quarkus will generate the final manifest in `target/kubernetes/kubernetes.yml` during the build.
 
 == Deploy to Kubernetes
 
@@ -67,19 +74,23 @@ You can deploy the application to Kubernetes with:
 ./mvnw package -Dquarkus.kubernetes.deploy=true
 ----
 
-This connects to the current Kubernetes cluster that you are connected with (e.g. via `kubectl config set-context --current --namespace $1`).
+This deploys the application to the current Kubernetes cluster that you are connected to (e.g. via `kubectl config set-context --current` and `kubectl config view --minify`).
 
 You may change the target namespace with `-Dquarkus.kubernetes.namespace=my-namespace`.
 
-== Kamelet sink pipe
+[source,shell]
+----
+./mvnw package -Dquarkus.kubernetes.deploy=true -Dquarkus.kubernetes.namespace=my-namespace
+----
+
+== Kamelet sink Pipe
 
 The sink consumes events from the Knative broker.
 It uses a Pipe resource as the central piece of code to define how the Knative events are consumed and where the events get forwarted to.
 
 The Pipe is a YAML file located in link:src/main/resources/camel/kn-connector-sink.yaml[src/main/resources/camel/kn-connector-sink.yaml]
 
-_kn-connector-log-sink.yaml_
-
+.kn-connector-sink.yaml
 [source,yaml]
 ----
 apiVersion: camel.apache.org/v1
@@ -103,7 +114,7 @@ spec:
 
 This connector uses the https://camel.apache.org/camel-kamelets/log-sink.html[log-sink] Kamelet and consumes events from the Knative broker.
 
-The Pipe always references a Knative broker as a source and connects to a Kamelet as a sink.
+The Pipe references a Knative broker as a source and connects to a Kamelet as a sink.
 
 The name of the broker is always `default` because the Knative Trigger resource is responsible for connecting the application to the Knative broker.
 The Trigger decides when to call the application as it provides the events to the application based on the trigger configuration.
@@ -111,7 +122,7 @@ The Trigger decides when to call the application as it provides the events to th
 This way the same container image can be used with different brokers and events (e.g. by adding filter criteria to the Trigger).
 It is only a matter of configuring the Trigger resource that connects the application with the Knative broker.
 
-You can find a sample Trigger in `src/main/kubernetes/kubernetes.yml`
+You can find a sample Trigger in link:src/main/kubernetes/kubernetes.yml[src/main/kubernetes/kubernetes.yml]
 
 [source,yaml]
 ----
@@ -155,34 +166,138 @@ kubectl set env deployment/kn-connector-log-sink CAMEL_KAMELET_LOG_SINK_MULTILIN
 
 The environment variables that overwrite properties on the Kamelet sink follow a naming convention:
 
-* CAMEL_KAMELET_{{NAME}}_{{ANY_PROPERTY_NAME}}
+* CAMEL_KAMELET_{{KAMELET_NAME}}_{{PROPERTY_NAME}}={{PROPERTY_VALUE}}
 
 The name represents the name of the Kamelet sink as defined in the https://camel.apache.org/camel-kamelets/[Kamelet catalog].
 
-=== ConfigMap and secrets
+=== ConfigMap and Secret
 
-You may also mount a configmap/secret with some `application.properties`:
+You may also mount a configmap/secret to overwrite Kamelet properties with values from the configmap/secret resource.
 
-_application.properties_
+Given a configmap named `my-log-sink-config` in Kubernetes that has two entries:
 
+.my-log-sink-config
 [source,properties]
 ----
-# Kamelet log-sink defined properties
-camel.kamelet.log-sink.showHeaders=true
-
-# any other Kamelet sink property
-camel.kamelet.log-sink.any-other-prop=value
+showHeaders=true
+level=DEBUG
 ----
+
+You can reference the values of the configmap in the environment variables like this:
+
+* CAMEL_KAMELET_LOG_SINK_SHOWHEADERS={{configmap:kn-sink-config/showHeaders}}
+* CAMEL_KAMELET_LOG_SINK_LEVEL={{configmap:kn-sink-config/level}}
+
+The configmap property values follow this general syntax:
+
+[source,text]
+----
+configmap:name/key[:defaultValue]
+----
+
+This means you can also set a default value in case the configmap should not be present.
+
+[source,text]
+----
+configmap:kn-sink-config/level:INFO
+----
+
+You can set the environment variables on the Kubernetes deployment for the connector:
+
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-sink
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: log-sink
+      app.kubernetes.io/version: 1.0-SNAPSHOT
+  template:
+    spec:
+      containers:
+        - image: localhost:5001/openshift-knative/log-sink:1.0-SNAPSHOT
+          imagePullPolicy: Always
+          name: log-sink
+          env:
+            - name: CAMEL_KAMELET_LOG_SINK_SHOWHEADERS
+              value: "{{configmap:kn-sink-config/showHeaders}}"
+            - name: CAMEL_KAMELET_LOG_SINK_LEVEL
+              value: "{{configmap:kn-sink-config/level:INFO}}"
+----
+
+In order to use the values from the configmap you need to add a volume and a volume mount to the deployment.
+
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-sink
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: log-sink
+      app.kubernetes.io/version: 1.0-SNAPSHOT
+  template:
+    spec:
+      containers:
+        - image: localhost:5001/openshift-knative/log-sink:1.0-SNAPSHOT
+          imagePullPolicy: Always
+          name: log-sink
+          env:
+            - name: CAMEL_KAMELET_LOG_SINK_SHOWHEADERS
+              value: "{{configmap:kn-sink-config/showHeaders}}"
+            - name: CAMEL_KAMELET_LOG_SINK_LEVEL
+              value: "{{configmap:kn-sink-config/level:INFO}}"
+          volumeMounts:
+            - mountPath: /etc/camel/conf.d/_configmaps/kn-sink-config
+              name: log-sink-config
+              readOnly: true
+      volumes:
+        - configMap:
+            name: my-log-sink-config
+          name: kn-sink-config
+----
+
+Camel is able to resolve the configmap mount path given in the volume mount.
+The mount path is configurable via `application.properties` in the connector project:
+
+* camel.kubernetes-config.mount-path-configmaps=/etc/camel/conf.d/_configmaps/kn-sink-config
+* camel.kubernetes-config.mount-path-secrets=/etc/camel/conf.d/_secrets/kn-sink-config
+
+The mount path configured on the Kubernetes deployment should match the configuration in the `application.properties`.
+
+Instead of settings the mount paths statically in the `application.properties` you can also set these via environment variables on the
+Kubernetes deployment.
+
+* CAMEL_K_MOUNT_PATH_CONFIGMAPS=/etc/camel/conf.d/_configmaps/kn-sink-config
+* CAMEL_K_MOUNT_PATH_SECRETS=/etc/camel/conf.d/_secrets/kn-sink-config
+
+The same mechanism applies to mounting and configuring Kubernetes secrets.
+The syntax for referencing a secret value in an environment variable is as follows:
+
+[source,text]
+----
+secret:name/key[:defaultValue]
+----
+
+This means you can overwrite Kamelet properties with the values from the secret like this:
+
+* CAMEL_KAMELET_LOG_SINK_SHOWHEADERS=secret:kn-sink-config/showHeaders
+* CAMEL_KAMELET_LOG_SINK_LEVEL=secret:kn-sink-config/level
 
 == CloudEvent attributes
 
+Each connector sink consumes events in CloudEvent data format.
 By default, the connector receives all events on the Knative broker.
 
 You may want to specify filters on the CloudEvent attributes so that the connector selectively consumes events from the broker.
 Just configure the Knative trigger to filter based on attributes:
 
-_Knative trigger_
-
+.Knative trigger
 [source,yaml]
 ----
 apiVersion: eventing.knative.dev/v1
@@ -216,25 +331,6 @@ You can use one of the Kamelets available in the https://camel.apache.org/camel-
 
 Typically, the Kamelet is backed by a Quarkus Camel extension component dependency that needs to be added to the Maven POM.
 The Kamelets in use may list additional dependencies that we need to include in the Maven POM.
-
-== Custom Kamelets
-
-Creating a new kn-connector project is very straightforward.
-You may copy one of the sample projects and adjust the reference to the Kamelets.
-
-Also, you can use the Camel JBang kubernetes export functionality to generate a Maven project from a given Pipe YAML file.
-
-[source,shell]
-----
-camel kubernetes export my-pipe.yaml --runtime quarkus --dir target
-----
-
-This generates a Maven project that you can use as a starting point for the kn-connector project.
-
-The connector is able to reference all Kamelets that are part of the https://camel.apache.org/camel-kamelets/[default Kamelet catalog].
-
-In case you want to use a custom Kamelet, place the `kamelet.yaml` file into `src/main/resources/kamelets`.
-The Kamelet will become part of the built container image and you can just reference the Kamelet in the Pipe YAML file as a source or sink.
 
 == More configuration options
 
