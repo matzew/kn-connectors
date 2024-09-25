@@ -40,6 +40,7 @@
         <module>tools</module>
         <module>timer-source</module>
         <module>aws-s3-source</module>
+        <module>aws-sqs-source</module>
         <module>log-sink</module>
     </modules>
 
